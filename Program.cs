@@ -45,7 +45,7 @@ internal class Program
         bool isExpenseCommand = commandParts.Contains("expense");
         bool isIncomeCommand = commandParts.Contains("income");
         bool isAddCommand = commandParts.Contains("add");
-        bool isSortByCommand = commandParts.Contains("sort_by");
+        bool isDeleteCommand = commandParts.Contains("delete");
 
         if (isExitCommand) Environment.Exit(0);
         if (isHelpCommand)
@@ -74,7 +74,56 @@ internal class Program
         bool isCategoryMissing = commandParts.Length == 3;
         bool isAmountMissing = commandParts.Length == 2;
 
-        if (isExpenseCommand && isAddCommand)
+        if (isExpenseCommand)
+        {
+            HandleExpenseCommand(isAddCommand, hasOptionalDescription, commandParts, hasAmountAndCategory, isCategoryMissing, isAmountMissing, isDeleteCommand);
+        }
+
+        if (isIncomeCommand)
+        {
+            HandleIncomeCommand(isAddCommand, hasOptionalDescription, commandParts, hasAmountAndCategory, isCategoryMissing, isAmountMissing, isDeleteCommand);
+        }
+    }
+
+    private static void HandleIncomeCommand(bool isAddCommand, bool hasOptionalDescription, string[] commandParts,
+        bool hasAmountAndCategory, bool isCategoryMissing, bool isAmountMissing, bool isDeleteCommand)
+    {
+        if (isAddCommand)
+        {
+            if (hasOptionalDescription)
+            {
+                string amount = commandParts[2];
+                string category = commandParts[3];
+                string description = commandParts[4];
+                AddIncome(decimal.Parse(amount), category, description);
+            }
+            else if (hasAmountAndCategory)
+            {
+                string amount = commandParts[2];
+                string category = commandParts[3];
+                AddIncome(decimal.Parse(amount), category);
+            }
+            else if (isCategoryMissing)
+            {
+                Console.WriteLine("Please enter a category for the income.");
+            }
+            else if (isAmountMissing)
+            {
+                Console.WriteLine("Please enter an amount for the income.");
+            }
+        }
+
+        if (isDeleteCommand)
+        {
+            var id = int.Parse(commandParts[2]);
+            RemoveIncome(id);
+        }
+    }
+
+    private static void HandleExpenseCommand(bool isAddCommand, bool hasOptionalDescription, string[] commandParts,
+        bool hasAmountAndCategory, bool isCategoryMissing, bool isAmountMissing, bool isDeleteCommand)
+    {
+        if (isAddCommand)
         {
             if (hasOptionalDescription)
             {
@@ -82,6 +131,7 @@ internal class Program
                 string category = commandParts[3];
                 string description = commandParts[4];
                 AddExpense(decimal.Parse(amount), category, description);
+
             }
             else if (hasAmountAndCategory)
             {
@@ -99,27 +149,41 @@ internal class Program
             }
         }
 
-        bool isIncomeAdd = isIncomeCommand && isAddCommand;
-        if (!isIncomeAdd)
+        if (isDeleteCommand)
         {
-            return;
-        }
-
-        if (isAmountMissing)
-        {
-            Console.WriteLine("Please enter an amount for the income.");
-        }
-        else if (isCategoryMissing)
-        {
-            Console.WriteLine("Please enter a category for the income.");
-        }
-        else
-        {
-            string amount = commandParts[2];
-            string category = commandParts[3];
-            AddIncome(decimal.Parse(amount), category);
+            var id = int.Parse(commandParts[2]);
+            RemoveExpense(id);
         }
     }
+
+    private static void RemoveExpense(int id)
+    {
+        var transactionToRemove = TransactionsList.FirstOrDefault(t => t.Id == id);
+        
+        if (transactionToRemove.Equals(default(Transaction)))
+        {
+            Console.WriteLine($"No transaction found with ID {id}.");
+            return;
+        }
+        
+        TransactionsList.Remove(transactionToRemove);
+        Console.WriteLine($"Expense with ID {id} has been removed.");
+    }
+    
+    private static void RemoveIncome(int id)
+    {
+        var transactionToRemove = TransactionsList.FirstOrDefault(t => t.Id == id);
+        
+        if (transactionToRemove.Equals(default(Transaction)))
+        {
+            Console.WriteLine($"No transaction found with ID {id}.");
+            return;
+        }
+        
+        TransactionsList.Remove(transactionToRemove);
+        Console.WriteLine($"Income with ID {id} has been removed.");
+    }
+
 
     private static void AddExpense(decimal amount, string category)
     {
@@ -199,13 +263,12 @@ internal class Program
     
     private static void NewTransactionLog(Transaction transaction)
     {
-        string outputMessage = $"{transaction.Id,-6} | {transaction.Date,-12} | {transaction.Time,-8} | {transaction.Amount,-10:F2}kr | {transaction.Category,-15}";
+        string outputMessage = $"{transaction.Id,-6} | {transaction.Date,-12} | {transaction.Time,-8} | {transaction.Amount,-10:F2}kr | {transaction.Category,-15} | ";
         if (!string.IsNullOrEmpty(transaction.Description))
         {
             outputMessage +=
-                $" | {transaction.Description,-30}";
+                $"{transaction.Description,-30}";
         }
-
         Console.WriteLine(outputMessage);
     }
     
@@ -223,5 +286,4 @@ internal class Program
         Console.WriteLine("balance - to show your current balance");
         Console.WriteLine("clear - to clear the screen");
     }
-
 }
