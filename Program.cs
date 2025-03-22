@@ -15,6 +15,7 @@
 
     private static void IntroductionMessage()
     {
+        Console.WriteLine();
         Console.WriteLine("Welcome to the budgeting program! Type 'exit' to quit or 'help' for a list of all commands.");   
     }
     
@@ -29,6 +30,7 @@
 
     private static void Main()
     {
+        IntroductionMessage();
         CommandOverview();
         Console.WriteLine();
         while (true)
