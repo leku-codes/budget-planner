@@ -163,13 +163,16 @@
     {
         if (TransactionsList.Count == 0)
         {
-            Console.WriteLine("There are no transactions to show a balance for.");
+            Console.WriteLine("There are no transactions to show.");
         }
         else
         { 
+            Console.WriteLine(
+                $"{"Date",-12} | {"Time",-8} | {"Amount",-12} | {"Category",-15} | {"Description",-30}");
+            Console.WriteLine(new string('-', 85));
             for (var i = 0; i < TransactionsList.Count; i++){
                 Console.WriteLine(
-                    $"{TransactionsList[i].Date} {TransactionsList[i].Amount}kr {TransactionsList[i].Category}");
+                    $"{TransactionsList[i].Date,-12} | {TransactionsList[i].Time,-8} | {TransactionsList[i].Amount,-10:F2}kr | {TransactionsList[i].Category,-15} | {TransactionsList[i].Description,-30}");
             }
         }
     }
