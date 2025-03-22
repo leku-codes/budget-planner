@@ -15,16 +15,16 @@
 
     private static void IntroductionMessage()
     {
-        Console.WriteLine("Willkommen beim Budgetierungsprogramm! Gebe 'exit' zum Verlassen oder 'help' für eine Liste aller Commands ein.");   
+        Console.WriteLine("Welcome to the budgeting program! Type 'exit' to quit or 'help' for a list of all commands.");   
     }
     
     private static void CommandOverview()
     {
-        Console.WriteLine("expense add <Betrag> <Kategorie> <Beschreibung>");
-        Console.WriteLine("income add <Betrag> <Kategorie> <Beschreibung>");
-        Console.WriteLine("show_transactions - um alle Transaktionen anzuzeigen");
-        Console.WriteLine("balance - um dein Guthaben anzuzeigen");
-        Console.WriteLine("clear - um den Bildschirm zu löschen");
+        Console.WriteLine("expense add <Amount> <Category> <Description>");
+        Console.WriteLine("income add <Amount> <Category> <Description>");
+        Console.WriteLine("show_transactions - to display all transactions");
+        Console.WriteLine("balance - to show your current balance");
+        Console.WriteLine("clear - to clear the screen");
     }
 
     private static void Main()
@@ -91,7 +91,7 @@
             } 
             else if (isAmountMissing)
             {
-                Console.WriteLine("Please enter a amount for the expense.");
+                Console.WriteLine("Please enter an amount for the expense.");
             }
         }
         
@@ -102,7 +102,7 @@
 
         if (isAmountMissing)
         {
-            Console.WriteLine("Please enter a amount for the income.");
+            Console.WriteLine("Please enter an amount for the income.");
         } 
         else if(isCategoryMissing)
         {
@@ -125,10 +125,10 @@
     {
         var transaction = new Transaction(-amount, category, description);
         TransactionsList.Add(transaction);
-        string outputMessage = $"Ausgabe wurde hinzugefügt: {amount}kr für {category}";
+        string outputMessage = $"Expense added: {amount}kr for {category}";
         if (!string.IsNullOrEmpty(description))
         {
-            outputMessage += $" mit Beschreibung: {description}";
+            outputMessage += $" with description: {description}";
         }
         Console.WriteLine(outputMessage);
     }
@@ -137,7 +137,7 @@
     {
         var transaction = new Transaction(amount, category);
         TransactionsList.Add(transaction);
-        Console.WriteLine($"Einnahme wurde hinzugefügt: {amount}kr für {category}");
+        Console.WriteLine($"Income added: {amount}kr for {category}");
     }
 
     private static void ShowBalance()
@@ -152,16 +152,16 @@
                 totalExpense += TransactionsList[i].Amount;
 
         var balance = totalIncome + totalExpense;
-        Console.WriteLine("Gesamte Einnahmen: " + totalIncome + "kr");
-        Console.WriteLine("Gesamte Ausgaben: " + totalExpense + "kr");
-        Console.WriteLine("Dein Kontostand ist: " + balance + "kr");
+        Console.WriteLine("Total income: " + totalIncome + "kr");
+        Console.WriteLine("Total expenses: " + totalExpense + "kr");
+        Console.WriteLine("Your account balance is: " + balance + "kr");
     }
 
     private static void ShowTransactionList()
     {
         if (TransactionsList.Count == 0)
         {
-            Console.WriteLine("There are no Transactions to show a balance for.");
+            Console.WriteLine("There are no transactions to show a balance for.");
         }
         else
         { 

@@ -1,0 +1,24 @@
+# Build results
+[Bb]in/
+[Oo]bj/
+
+# User-specific files
+.idea/
+.DS_Store
+
+# Visual Studio files
+*.user
+*.userosscache
+*.suo
+*.userprefs
+.vs/
+
+# Rider files
+.idea/
+*.sln.iml
+
+# NuGet Packages
+*.nupkg
+**/packages/*
+*.nuget.props
+*.nuget.targets
