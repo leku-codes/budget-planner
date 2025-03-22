@@ -1,289 +1,343 @@
 ﻿namespace BudgetPlanning;
 
-internal class Program
+internal struct Program
 {
-    // TODO filters in show_transactions sort_by="value" sort="highest", show_transactions sort_by="value" sort="lowest"
-    // TODO filter by category
-    // TODO filter by date - last month, last week, last year
-    // TODO filter by amount less / most
+    // Kommandotypen als Enum
+    private enum CommandType
+    {
+        Unknown,
+        Help,
+        Exit,
+        Clear,
+        ShowTransactions,
+        Balance,
+        AddExpense,
+        AddIncome,
+        DeleteTransaction
+    }
 
-    // TODO add a way to add many transactions at once
-    // TODO add a way to remove transactions
-    // TODO add a way to edit transactions
-    // TODO add a way to save transactions to a file
-    // TODO add a way to load transactions from a file
+    // Struktur für Kommando-Definitionen
+    private struct CommandDefinition
+    {
+        public string Name;
+        public string Description;
+        public string Usage;
+        public Func<string[], bool> ExecuteFunction;
+    }
 
-    private static readonly List<Transaction> TransactionsList = [];
-    
+    private static readonly List<Transaction> Transactions = [];
+    private static readonly Dictionary<CommandType, CommandDefinition> Commands = new Dictionary<CommandType, CommandDefinition>();
+
     private static void Main()
     {
-        IntroductionMessage();
-        CommandOverview();
+        InitializeCommands();
+        
+        Console.WriteLine("Willkommen beim Budgetierungsprogramm!");
+        Console.WriteLine("Geben Sie 'help' ein, um eine Liste der verfügbaren Befehle anzuzeigen.");
         Console.WriteLine();
+        
         while (true)
         {
-            var command = Console.ReadLine();
-            HandleCommand(command);
+            Console.Write("> ");
+            string input = Console.ReadLine();
+            ParseAndExecuteCommand(input);
         }
     }
 
-    private static void HandleCommand(string? command)
+    private static void InitializeCommands()
     {
-        if (string.IsNullOrWhiteSpace(command))
+        // Registriere alle Kommandos
+        Commands[CommandType.Help] = new CommandDefinition
         {
+            Name = "help",
+            Description = "Zeigt Hilfe zu allen verfügbaren Befehlen an.",
+            Usage = "help [Befehl]",
+            ExecuteFunction = ExecuteHelpCommand
+        };
+
+        Commands[CommandType.Exit] = new CommandDefinition
+        {
+            Name = "exit",
+            Description = "Beendet das Programm.",
+            Usage = "exit",
+            ExecuteFunction = _ => { Environment.Exit(0); return true; }
+        };
+
+        Commands[CommandType.Clear] = new CommandDefinition
+        {
+            Name = "clear",
+            Description = "Löscht den Bildschirminhalt.",
+            Usage = "clear",
+            ExecuteFunction = _ => { Console.Clear(); return true; }
+        };
+
+        Commands[CommandType.ShowTransactions] = new CommandDefinition
+        {
+            Name = "show",
+            Description = "Zeigt alle Transaktionen an, mit optionalen Filtern.",
+            Usage = "show [category=Wert] [sort=highest|lowest] [date=week|month]",
+            ExecuteFunction = ExecuteShowTransactionsCommand
+        };
+
+        Commands[CommandType.Balance] = new CommandDefinition
+        {
+            Name = "balance",
+            Description = "Zeigt den aktuellen Kontostand an.",
+            Usage = "balance",
+            ExecuteFunction = ExecuteBalanceCommand
+        };
+
+        Commands[CommandType.AddExpense] = new CommandDefinition
+        {
+            Name = "expense",
+            Description = "Fügt eine neue Ausgabe hinzu.",
+            Usage = "expense <Betrag> <Kategorie> [Beschreibung]",
+            ExecuteFunction = ExecuteAddExpenseCommand
+        };
+
+        Commands[CommandType.AddIncome] = new CommandDefinition
+        {
+            Name = "income",
+            Description = "Fügt eine neue Einnahme hinzu.",
+            Usage = "income <Betrag> <Kategorie> [Beschreibung]",
+            ExecuteFunction = ExecuteAddIncomeCommand
+        };
+
+        Commands[CommandType.DeleteTransaction] = new CommandDefinition
+        {
+            Name = "delete",
+            Description = "Löscht eine Transaktion anhand ihrer ID.",
+            Usage = "delete <ID>",
+            ExecuteFunction = ExecuteDeleteTransactionCommand
+        };
+    }
+
+    private static void ParseAndExecuteCommand(string input)
+    {
+        if (string.IsNullOrWhiteSpace(input))
+            return;
+
+        string[] parts = input.Trim().Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        
+        if (parts.Length == 0)
+            return;
+
+        string commandName = parts[0].ToLower();
+        CommandType commandType = GetCommandType(commandName);
+
+        if (commandType == CommandType.Unknown)
+        {
+            Console.WriteLine($"Unbekanntes Kommando: {commandName}");
             return;
         }
 
-        string trimmedCommand = command.Trim().ToLower();
-        string[] commandParts = trimmedCommand.Split(' ');
-
-        bool isExitCommand = commandParts.Contains("exit");
-        bool isHelpCommand = commandParts.Contains("help");
-        bool isShowTransactionsCommand = commandParts.Contains("show_transactions");
-        bool isClearCommand = commandParts.Contains("clear");
-        bool isBalanceCommand = commandParts.Contains("balance");
-        bool isExpenseCommand = commandParts.Contains("expense");
-        bool isIncomeCommand = commandParts.Contains("income");
-        bool isAddCommand = commandParts.Contains("add");
-        bool isDeleteCommand = commandParts.Contains("delete");
-
-        if (isExitCommand) Environment.Exit(0);
-        if (isHelpCommand)
-        {
-            CommandOverview();
-        }
-
-        if (isClearCommand)
-        {
-            Console.Clear();
-            IntroductionMessage();
-        }
-
-        if (isShowTransactionsCommand)
-        {
-            ShowTransactionList();
-        }
-
-        if (isBalanceCommand)
-        {
-            ShowBalance();
-        }
-
-        bool hasOptionalDescription = commandParts.Length == 5;
-        bool hasAmountAndCategory = commandParts.Length == 4;
-        bool isCategoryMissing = commandParts.Length == 3;
-        bool isAmountMissing = commandParts.Length == 2;
-
-        if (isExpenseCommand)
-        {
-            HandleExpenseCommand(isAddCommand, hasOptionalDescription, commandParts, hasAmountAndCategory, isCategoryMissing, isAmountMissing, isDeleteCommand);
-        }
-
-        if (isIncomeCommand)
-        {
-            HandleIncomeCommand(isAddCommand, hasOptionalDescription, commandParts, hasAmountAndCategory, isCategoryMissing, isAmountMissing, isDeleteCommand);
-        }
+        string[] args = parts.Skip(1).ToArray();
+        Commands[commandType].ExecuteFunction(args);
     }
 
-    private static void HandleIncomeCommand(bool isAddCommand, bool hasOptionalDescription, string[] commandParts,
-        bool hasAmountAndCategory, bool isCategoryMissing, bool isAmountMissing, bool isDeleteCommand)
+    private static CommandType GetCommandType(string commandName)
     {
-        if (isAddCommand)
+        foreach (var kvp in Commands)
         {
-            if (hasOptionalDescription)
+            if (kvp.Value.Name.Equals(commandName, StringComparison.OrdinalIgnoreCase))
+                return kvp.Key;
+        }
+        return CommandType.Unknown;
+    }
+
+    // Implementierungen der Kommando-Ausführungsfunktionen
+    private static bool ExecuteHelpCommand(string[] args)
+    {
+        if (args.Length == 0)
+        {
+            // Zeige allgemeine Hilfe
+            Console.WriteLine("Verfügbare Befehle:");
+            foreach (var command in Commands.Values)
             {
-                string amount = commandParts[2];
-                string category = commandParts[3];
-                string description = commandParts[4];
-                AddIncome(decimal.Parse(amount), category, description);
+                Console.WriteLine($"  {command.Name,-15} - {command.Description}");
             }
-            else if (hasAmountAndCategory)
-            {
-                string amount = commandParts[2];
-                string category = commandParts[3];
-                AddIncome(decimal.Parse(amount), category);
-            }
-            else if (isCategoryMissing)
-            {
-                Console.WriteLine("Please enter a category for the income.");
-            }
-            else if (isAmountMissing)
-            {
-                Console.WriteLine("Please enter an amount for the income.");
-            }
-        }
-
-        if (isDeleteCommand)
-        {
-            var id = int.Parse(commandParts[2]);
-            RemoveIncome(id);
-        }
-    }
-
-    private static void HandleExpenseCommand(bool isAddCommand, bool hasOptionalDescription, string[] commandParts,
-        bool hasAmountAndCategory, bool isCategoryMissing, bool isAmountMissing, bool isDeleteCommand)
-    {
-        if (isAddCommand)
-        {
-            if (hasOptionalDescription)
-            {
-                string amount = commandParts[2];
-                string category = commandParts[3];
-                string description = commandParts[4];
-                AddExpense(decimal.Parse(amount), category, description);
-
-            }
-            else if (hasAmountAndCategory)
-            {
-                string amount = commandParts[2];
-                string category = commandParts[3];
-                AddExpense(decimal.Parse(amount), category);
-            }
-            else if (isCategoryMissing)
-            {
-                Console.WriteLine("Please enter a category for the expense.");
-            }
-            else if (isAmountMissing)
-            {
-                Console.WriteLine("Please enter an amount for the expense.");
-            }
-        }
-
-        if (isDeleteCommand)
-        {
-            var id = int.Parse(commandParts[2]);
-            RemoveExpense(id);
-        }
-    }
-
-    private static void RemoveExpense(int id)
-    {
-        var transactionToRemove = TransactionsList.FirstOrDefault(t => t.Id == id);
-        
-        if (transactionToRemove.Equals(default(Transaction)))
-        {
-            Console.WriteLine($"No transaction found with ID {id}.");
-            return;
-        }
-        
-        TransactionsList.Remove(transactionToRemove);
-        Console.WriteLine($"Expense with ID {id} has been removed.");
-    }
-    
-    private static void RemoveIncome(int id)
-    {
-        var transactionToRemove = TransactionsList.FirstOrDefault(t => t.Id == id);
-        
-        if (transactionToRemove.Equals(default(Transaction)))
-        {
-            Console.WriteLine($"No transaction found with ID {id}.");
-            return;
-        }
-        
-        TransactionsList.Remove(transactionToRemove);
-        Console.WriteLine($"Income with ID {id} has been removed.");
-    }
-
-
-    private static void AddExpense(decimal amount, string category)
-    {
-        AddExpense(amount, category, "");
-    }
-
-    private static void AddExpense(decimal amount, string category, string description)
-    {
-        Transaction transaction = new Transaction(-amount, category, description);
-        TransactionsList.Add(transaction);
-        LineSeparatedHeadline("Added new expense record:");
-        TableLogSetup();
-        NewTransactionLog(transaction);
-    }
-
-    private static void AddIncome(decimal amount, string category)
-    {
-        AddIncome(amount, category, "");
-    }
-
-    private static void AddIncome(decimal amount, string category, string description)
-    {
-        Transaction transaction = new Transaction(-amount, category, description);
-        TransactionsList.Add(transaction);
-        TableLogSetup();
-        NewTransactionLog(transaction);
-    }
-
-    private static void ShowBalance()
-    {
-        decimal totalIncome = 0;
-        decimal totalExpense = 0;
-
-        for (var i = 0; i < TransactionsList.Count; i++)
-            if (TransactionsList[i].Amount > 0)
-                totalIncome += TransactionsList[i].Amount;
-            else
-                totalExpense += TransactionsList[i].Amount;
-
-        var balance = totalIncome + totalExpense;
-        Console.WriteLine("Total income: " + totalIncome + "kr");
-        Console.WriteLine("Total expenses: " + totalExpense + "kr");
-        Console.WriteLine("Your account balance is: " + balance + "kr");
-    }
-
-    private static void ShowTransactionList()
-    {
-        if (TransactionsList.Count == 0)
-        {
-            Console.WriteLine("There are no transactions to show.");
+            Console.WriteLine("\nGeben Sie 'help [Befehl]' ein, um detaillierte Hilfe zu einem bestimmten Befehl zu erhalten.");
         }
         else
         {
-            TableLogSetup();
-            for (var i = 0; i < TransactionsList.Count; i++)
+            // Zeige Hilfe für einen bestimmten Befehl
+            string commandName = args[0];
+            CommandType commandType = GetCommandType(commandName);
+            
+            if (commandType != CommandType.Unknown)
             {
-                Console.WriteLine($"{TransactionsList[i].Id,-6} | {TransactionsList[i].Date,-12} | {TransactionsList[i].Time,-8} | {TransactionsList[i].Amount,-10:F2}kr | {TransactionsList[i].Category,-15} | {TransactionsList[i].Description,-30}");
+                var command = Commands[commandType];
+                Console.WriteLine($"Befehl: {command.Name}");
+                Console.WriteLine($"Beschreibung: {command.Description}");
+                Console.WriteLine($"Verwendung: {command.Usage}");
             }
-            Console.WriteLine();
+            else
+            {
+                Console.WriteLine($"Unbekannter Befehl: {commandName}");
+            }
         }
+        return true;
     }
 
-    private static void TableLogSetup()
+    private static bool ExecuteShowTransactionsCommand(string[] args)
     {
-        string tableCols = $"{"ID",-6} | {"Date",-12} | {"Time",-8} | {"Amount",-12} | {"Category",-15} | {"Description",-30}";
-        string dashedSeparator = new string('-', 85);
-        Console.WriteLine(tableCols);
-        Console.WriteLine(dashedSeparator);
-    }
-
-    private static void LineSeparatedHeadline(string headline)
-    {
-        Console.WriteLine();
-        Console.WriteLine(headline);
-        Console.WriteLine();
-    }
-    
-    private static void NewTransactionLog(Transaction transaction)
-    {
-        string outputMessage = $"{transaction.Id,-6} | {transaction.Date,-12} | {transaction.Time,-8} | {transaction.Amount,-10:F2}kr | {transaction.Category,-15} | ";
-        if (!string.IsNullOrEmpty(transaction.Description))
+        if (Transactions.Count == 0)
         {
-            outputMessage +=
-                $"{transaction.Description,-30}";
+            Console.WriteLine("Keine Transaktionen vorhanden.");
+            return true;
         }
-        Console.WriteLine(outputMessage);
-    }
-    
-    private static void IntroductionMessage()
-    {
-        Console.WriteLine();
-        Console.WriteLine("Welcome to the budgeting program! Type 'exit' to quit or 'help' for a list of all commands.");
+
+        // Hier können Filter implementiert werden
+        IEnumerable<Transaction> filtered = Transactions;
+        
+        if (args.Length > 0)
+        {
+            // Filtern nach verschiedenen Kriterien
+            foreach (var arg in args)
+            {
+                if (arg.StartsWith("category=", StringComparison.OrdinalIgnoreCase))
+                {
+                    string category = arg.Substring("category=".Length);
+                    filtered = filtered.Where(t => t.Category.Equals(category, StringComparison.OrdinalIgnoreCase));
+                }
+                else if (arg.StartsWith("sort=", StringComparison.OrdinalIgnoreCase))
+                {
+                    string sortType = arg.Substring("sort=".Length);
+                    if (sortType.Equals("highest", StringComparison.OrdinalIgnoreCase))
+                    {
+                        filtered = filtered.OrderByDescending(t => t.Amount);
+                    }
+                    else if (sortType.Equals("lowest", StringComparison.OrdinalIgnoreCase))
+                    {
+                        filtered = filtered.OrderBy(t => t.Amount);
+                    }
+                }
+                else if (arg.StartsWith("date=", StringComparison.OrdinalIgnoreCase))
+                {
+                    string dateFilter = arg.Substring("date=".Length);
+                    DateTime now = DateTime.Now;
+                    
+                    if (dateFilter.Equals("week", StringComparison.OrdinalIgnoreCase))
+                    {
+                        DateOnly weekAgo = DateOnly.FromDateTime(now.AddDays(-7));
+                        filtered = filtered.Where(t => t.Date >= weekAgo);
+                    }
+                    else if (dateFilter.Equals("month", StringComparison.OrdinalIgnoreCase))
+                    {
+                        DateOnly monthAgo = DateOnly.FromDateTime(now.AddMonths(-1));
+                        filtered = filtered.Where(t => t.Date >= monthAgo);
+                    }
+                }
+            }
+        }
+
+        DisplayTransactions(filtered);
+        return true;
     }
 
-    private static void CommandOverview()
+    private static void DisplayTransactions(IEnumerable<Transaction> transactions)
     {
-        Console.WriteLine("expense add <Amount> <Category> <Description>");
-        Console.WriteLine("income add <Amount> <Category> <Description>");
-        Console.WriteLine("show_transactions - to display all transactions");
-        Console.WriteLine("balance - to show your current balance");
-        Console.WriteLine("clear - to clear the screen");
+        Console.WriteLine($"{"ID",-6} | {"Datum",-12} | {"Zeit",-8} | {"Betrag",-12} | {"Kategorie",-15} | {"Beschreibung",-30}");
+        Console.WriteLine(new string('-', 85));
+        
+        foreach (var t in transactions)
+        {
+            Console.WriteLine($"{t.Id,-6} | {t.Date,-12} | {t.Time,-8} | {t.Amount,-10:F2}kr | {t.Category,-15} | {t.Description,-30}");
+        }
+    }
+
+    private static bool ExecuteBalanceCommand(string[] args)
+    {
+        decimal totalIncome = Transactions.Where(t => t.Amount > 0).Sum(t => t.Amount);
+        decimal totalExpense = Transactions.Where(t => t.Amount < 0).Sum(t => t.Amount);
+        decimal balance = totalIncome + totalExpense;
+
+        Console.WriteLine($"Gesamteinnahmen: {totalIncome:F2}kr");
+        Console.WriteLine($"Gesamtausgaben: {totalExpense:F2}kr");
+        Console.WriteLine($"Kontostand: {balance:F2}kr");
+        
+        return true;
+    }
+
+    private static bool ExecuteAddExpenseCommand(string[] args)
+    {
+        if (args.Length < 2)
+        {
+            Console.WriteLine("Fehler: Zu wenige Argumente.");
+            Console.WriteLine($"Verwendung: expense <Betrag> <Kategorie> [Beschreibung]");
+            return false;
+        }
+
+        if (!decimal.TryParse(args[0], out decimal amount))
+        {
+            Console.WriteLine("Fehler: Der Betrag muss eine Zahl sein.");
+            return false;
+        }
+
+        string category = args[1];
+        string description = args.Length > 2 ? string.Join(" ", args.Skip(2)) : "";
+
+        var transaction = new Transaction(-Math.Abs(amount), category, description);
+        Transactions.Add(transaction);
+
+        Console.WriteLine("Neue Ausgabe hinzugefügt:");
+        Console.WriteLine($"{transaction.Id,-6} | {transaction.Date,-12} | {transaction.Time,-8} | {transaction.Amount,-10:F2}kr | {transaction.Category,-15} | {transaction.Description,-30}");
+        
+        return true;
+    }
+
+    private static bool ExecuteAddIncomeCommand(string[] args)
+    {
+        if (args.Length < 2)
+        {
+            Console.WriteLine("Fehler: Zu wenige Argumente.");
+            Console.WriteLine($"Verwendung: income <Betrag> <Kategorie> [Beschreibung]");
+            return false;
+        }
+
+        if (!decimal.TryParse(args[0], out decimal amount))
+        {
+            Console.WriteLine("Fehler: Der Betrag muss eine Zahl sein.");
+            return false;
+        }
+
+        string category = args[1];
+        string description = args.Length > 2 ? string.Join(" ", args.Skip(2)) : "";
+
+        var transaction = new Transaction(Math.Abs(amount), category, description);
+        Transactions.Add(transaction);
+
+        Console.WriteLine("Neue Einnahme hinzugefügt:");
+        Console.WriteLine($"{transaction.Id,-6} | {transaction.Date,-12} | {transaction.Time,-8} | {transaction.Amount,-10:F2}kr | {transaction.Category,-15} | {transaction.Description,-30}");
+        
+        return true;
+    }
+
+    private static bool ExecuteDeleteTransactionCommand(string[] args)
+    {
+        if (args.Length < 1)
+        {
+            Console.WriteLine("Fehler: Bitte eine ID angeben.");
+            Console.WriteLine($"Verwendung: delete <ID>");
+            return false;
+        }
+
+        if (!int.TryParse(args[0], out int id))
+        {
+            Console.WriteLine("Fehler: Die ID muss eine Zahl sein.");
+            return false;
+        }
+
+        var transaction = Transactions.FirstOrDefault(t => t.Id == id);
+        if (transaction.Equals(default(Transaction)))
+        {
+            Console.WriteLine($"Fehler: Keine Transaktion mit ID {id} gefunden.");
+            return false;
+        }
+
+        Transactions.Remove(transaction);
+        Console.WriteLine($"Transaktion mit ID {id} wurde gelöscht.");
+        
+        return true;
     }
 }
